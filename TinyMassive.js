@@ -263,6 +263,8 @@ var TinyMassive = {
     },
     Warp : function(source,dest){
         var id = this.GenerateWid(null,this.KeyTypeEnum.Warp);
+        id = source.id + '_' + id;
+
         this.client.publish('KeyAdded',this.KeyTypeEnum.Warp+id);
 
         this.client.incr("Warps");
@@ -334,6 +336,9 @@ var TinyMassive = {
     GetWarpByKey : function(warpKey,callback){
         this.client.hgetall(warpKey,callback);
     },
+    GetWarpsByZone : function (zoneId, callback) {
+        this._getHashesFromKeyPattern('GetWarpsByZone', "Warp:" + zoneId + "*", callback);
+    },
     UpdateZone : function(zone,callback){
         this.client.hmset('Zone:'+zone.id,zone,callback);
     },
@@ -349,11 +354,18 @@ var TinyMassive = {
                 _this.client.hset('PlayerPosition:'+warp.destid,playerKey,JSON.stringify({x:warp.destx,z:warp.destz}));
                 _this.client.hincrby('Zone:'+warp.sourceid, 'playing', -1);
                 _this.client.hincrby('Zone:'+warp.destid, 'playing', 1);
-                _this.client.hset(playerKey, 'zone', 'Zone:'+warp.destid,function(err,reply){
+                _this.client.hset(playerKey, 'zone', warp.destid,function(err,reply){
                     callback(err,reply);
                 });
             }
 
+        });
+    },
+    PlayerToZone : function(playerKey,zoneId,callback){
+        var _this = this;
+        _this.client.hincrby('Zone:'+zoneId, 'playing', 1);
+        _this.client.hset(playerKey, 'zone', zoneId,function(err,reply){
+            callback(err,reply);
         });
     },
     UpdatePlayerPosition : function(playerId,zoneId,point,callback){
